@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>自助版听默练习</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Microsoft YaHei,sans-serif;max-width:680px;margin:20px auto;padding:0 10px;background:#f5f9ff;line-height:1.5}
+  .main{background:#fff;border-radius:16px;padding:20px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+  h2{text-align:center;margin:0 0 16px;font-size:20px;color:#222}
+  .type-tab-box{display:flex;gap:8px;margin-bottom:12px}
+  .type-tab{flex:1;padding:10px;text-align:center;border-radius:8px;background:#f0f0f0;cursor:pointer;font-weight:bold;transition:all 0.2s}
+  .type-tab.active{background:#007bff;color:#fff}
+  .mode-tag{text-align:center;font-size:13px;color:#fff;background:#e83e8c;border-radius:4px;padding:2px 8px;display:inline-block;margin-bottom:12px}
+  .word{background:#eaf6ff;border-radius:12px;padding:20px;text-align:center;font-size:24px;font-weight:700;color:#005cce;min-height:90px;position:relative;margin-bottom:16px;display:flex;align-items:center;justify-content:center;word-break:break-word}
+  .status{position:absolute;top:8px;left:10px;font-size:14px;font-weight:700}
+  .status-playing{color:#0099FF}
+  .status-paused{color:#FF3333}
+  .progress{position:absolute;top:8px;right:10px;font-size:14px;color:#666;font-weight:500}
+  .countdown{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:14px;color:#ff9000;font-weight:700}
+  .row{margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row label{min-width:90px;font-weight:500;font-size:14px;flex-shrink:0}
+  select{flex:1;padding:10px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px;min-width:120px}
+  select:disabled{background:#f5f5f5;cursor:not-allowed;opacity:0.7}
+  .btns{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  button{flex:1;padding:12px 8px;border:none;border-radius:8px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;min-width:70px;transition:opacity 0.2s;user-select:none}
+  button:active{opacity:0.7}
+  button:disabled{background:#ccc;cursor:not-allowed;opacity:0.7}
+  .btn-start{background:#007bff}
+  .btn-pause{background:#ff9000}
+  .btn-reset{background:#ff3b30;padding:4px 6px;font-size:12px;flex:0 0 50px;border-radius:6px}
+  .btn-prev{background:#28a254}
+  .btn-next{background:#17a2b8}
+  .btn-mark{background:#6610f2}
+  .btn-custom{background:#17a2b8;margin-top:8px;padding:10px;font-size:13px;flex:1}
+  .btn-more{background:#6c757d;margin-top:8px;padding:10px;font-size:13px;width:100%}
+  .btn-wrong-dict{background:#e83e8c;margin-top:8px;padding:10px;font-size:13px;flex:1}
+  .btn-ocr{background:#20c997;margin-top:8px;padding:10px;font-size:13px;flex:1}
+  .btn-mini{padding:8px 10px;font-size:12px;flex:none;min-width:auto;margin:0}
+  .answer{background:#f8f9fa;border:1px solid #ddd;border-radius:10px;padding:12px;margin-top:12px;font-size:14px;line-height:1.8;display:none}
+  .answer div{margin:4px 0}
+  .answer .primary{color:#d63384;font-weight:700}
+  .answer .secondary{color:#0d6efd;font-weight:500}
+  .toggle-answer{margin-top:8px;text-align:right;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .toggle-answer button{background:#6c757d;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:12px;min-width:auto;flex:none}
+  .wrongBox{margin-top:16px;padding:12px;background:#fff3cd;border-radius:10px}
+  .wrongBox h4{margin:0 0 8px;font-size:14px}
+  .wrongList{max-height:180px;overflow-y:auto}
+  .wrongItem{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid #ffeaa7}
+  .wrongItem:last-child{border-bottom:none}
+  .wrongItem button{background:#dc3545;color:#fff;border:none;border-radius:4px;padding:2px 6px;width:auto;height:auto;line-height:1;font-size:12px;min-width:auto;flex:none}
+  .wrongBtns{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .wrongBtns button{background:#6c757d;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-size:12px;min-width:auto;flex:none}
+  #moreSettings{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #eee}
+  .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;justify-content:center;align-items:center;z-index:999}
+  .modalContent{background:#fff;border-radius:10px;width:90%;max-width:460px;padding:16px;max-height:90vh;overflow-y:auto}
+  .modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .modalHead h4{margin:0;font-size:16px;color:#005cce}
+  .modalClose{background:#ff3b30;padding:4px 6px;font-size:25px;flex:0 0 50px;border-radius:6px} 
+  .customModalBody input,.customModalBody textarea{width:100%;padding:10px;border-radius:6px;border:1px solid #ccc;margin-bottom:10px;font-size:14px}
+  .customModalBody textarea{height:120px;resize:none}
+  .custom-btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .custom-btns button{padding:8px 12px;font-size:12px;background:#007bff;min-width:auto;flex:none}
+  #fileInput,#cameraInput,#albumInput{display:none}
+  .delCustomBox{margin-left:auto}
+  .delCustomBox button{padding:6px 10px;font-size:12px;background:#dc3545;color:#fff;border:none;border-radius:6px;min-width:auto;flex:none}
+  .delCustomBox button:disabled{background:#ccc;cursor:not-allowed}
+  #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;padding:10px 20px;border-radius:8px;z-index:9999;font-size:14px;display:none;animation:fadeInOut 3s ease-in-out}
+  @keyframes fadeInOut {0%{opacity:0;top:10px}10%{opacity:1;top:20px}90%{opacity:1;top:20px}100%{opacity:0;top:10px}}
+  #voiceTip{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#fff3cd;color:#85640d;padding:10px 16px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;font-size:14px;display:none}
+  #voiceTip button{background:none;border:none;color:#85640d;margin-left:8px;cursor:pointer;font-size:14px;padding:0;min-width:auto;flex:none;color:#007bff}
+  .switch{display:flex;align-items:center;gap:8px}
+  .switch input{width:16px;height:16px;cursor:pointer}
+  .switch label{margin:0;min-width:auto;font-size:14px}
+  .record-box{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .voice-manage{background:#f8f9fa;padding:8px;border-radius:8px;margin-top:8px;display:none}
+  .voice-manage h5{font-size:13px;margin-bottom:6px}
+  .voice-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #eee}
+  .voice-item button{background:#dc3545;color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:12px}
+  #recordAudio{display:none;max-width:120px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="voiceTip">
+  未检测到可用发音引擎，<br>1. 请点击页面任意位置激活权限<br>2. 建议使用Chrome/Edge/微信/QQ浏览器
+  <button onclick="document.getElementById('voiceTip').style.display = 'none'">关闭</button>
+</div>
+
+<div class="main">
+  <h2>自助版听默练习</h2>
+  <div class="type-tab-box">
+    <div class="type-tab active" data-type="en">英语听写</div>
+    <div class="type-tab" data-type="cn">语文默写</div>
+  </div>
+  <div style="text-align:center;" id="modeTagBox"></div>
+
+  <div class="word" id="wordBox">
+    <div id="status" class="status-paused">已暂停</div>
+    <div id="progress" class="progress">0/0</div>
+    <div id="countdown" class="countdown"></div>
+    <span id="wordText">准备开始</span>
+  </div>
+
+  <div class="row">
+    <label>选择模块：</label>
+    <select id="moduleSel"></select>
+    <div class="delCustomBox">
+      <button id="delCustomModuleBtn">删模块</button>
+    </div>
+  </div>
+
+  <div class="btns">
+    <button id="togglePlayBtn" class="btn-start">开始</button>
+    <button id="prevBtn" class="btn-prev">上一个</button>
+    <button id="nextBtn" class="btn-next">下一个</button>
+    <button id="markBtn" class="btn-mark">标记易错</button>
+    <button id="resetBtn" class="btn-reset">重置</button>
+  </div>
+
+  <div class="row" id="dictModeRow">
+    <label>听写模式：</label>
+    <select id="dictModeSel">
+      <option value="cn">中默英</option>
+      <option value="en">英默中</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <label>播放模式：</label>
+    <select id="playModeSel">
+      <option value="order">顺序播放</option>
+      <option value="random">随机播放</option>
+    </select>
+  </div>
+
+  <button class="btn-more" id="toggleMoreBtn">其他设置 ▼</button>
+  <div id="moreSettings">
+    <div class="row">
+      <label>朗读速度：</label>
+      <select id="speedSel">
+        <option value="0.5">0.5倍</option>
+        <option value="0.8">0.8倍</option>
+        <option value="1.0" selected>1.0倍</option>
+        <option value="1.2">1.2倍</option>
+        <option value="1.5">1.5倍</option>
+        <option value="2.0">2.0倍</option>
+        <option value="3.0">3.0倍</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>播报声音：</label>
+      <select id="voiceSel"></select>
+    </div>
+    
+    <div class="record-box">
+      <button id="recordBtn" class="btn-mini btn-custom">🎙️ 录声音</button>
+      <button id="stopRecordBtn" class="btn-mini btn-reset" style="display:none;">停止</button>
+      <button id="manageVoiceBtn" class="btn-mini btn-more">📋 管理录音</button>
+      <audio id="recordAudio" controls>
+    </div>
+    <div class="voice-manage" id="voiceManage">
+      <h5>我的自定义录音</h5>
+      <div id="voiceList"></div>
+    </div>
+
+    <div class="row" id="langRow">
+      <label>英文语种：</label>
+      <select id="langSel">
+        <option value="en-US">美式英语</option>
+        <option value="en-GB">英式英语</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>基础间隔：</label>
+      <select id="baseDelaySel">
+        <option value="3">3秒</option>
+        <option value="5" selected>5秒</option>
+        <option value="7">7秒</option>
+        <option value="10">10秒</option>
+        <option value="15">15秒</option>
+        <option value="20">20秒</option>
+        <option value="30">30秒</option>
+      </select>
+    </div>
+    
+    <div class="row">
+      <label>长句加秒：</label>
+      <select id="extraSecSel">
+        <option value="0">不加</option>
+        <option value="1">+1秒</option>
+        <option value="2" selected>+2秒</option>
+        <option value="3">+3秒</option>
+        <option value="5">+5秒</option>
+        <option value="10">+10秒</option>
+      </select>
+    </div>
+    
+    <div class="row">
+      <label>重复播报：</label>
+      <select id="repeatTimesSel">
+        <option value="1">1次</option>
+        <option value="2" selected>2次</option>
+        <option value="3">3次</option>
+        <option value="4">4次</option>
+        <option value="5">5次</option>
+      </select>
+    </div>
+    
+    <div class="row switch">
+      <input type="checkbox" id="loopSwitch"><label for="loopSwitch">列表循环播放</label>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-custom" id="openCustomModalBtn">📝 自定义模块</button>
+    <button class="btn-wrong-dict" id="wrongDictBtn">📛 易错词听写</button>
+    <button class="btn-ocr" id="ocrBtn">📷 拍照识别</button>
+  </div>
+
+  <div class="answer" id="answerBox"></div>
+  <div class="toggle-answer">
+    <button id="toggleAnswerBtn">显示答案</button>
+    <button id="speakAnswerBtn" style="display:none">播报答案</button>
+  </div>
+
+  <div class="wrongBox">
+    <h4>📛 易错词组</h4>
+    <div class="wrongList" id="wrongList"></div>
+    <div class="wrongBtns">
+      <button id="clearWrongBtn">清空易错词</button>
+      <button id="addWrongBtn">手动新增</button>
+      <button id="exportWrongBtn">导出TXT</button>
+    </div>
+  </div>
+</div>
+
+<div id="customModal" class="modal">
+  <div class="modalContent">
+    <div class="modalHead">
+      <h4 id="customModalTitle">自定义听写模块</h4>
+      <button class="modalClose" id="closeCustomModalBtn">×</button>
+    </div>
+    <div class="customModalBody">
+      <input id="customModuleNameInput" placeholder="模块名（如：Unit1 / 语文第1课）">
+      <textarea id="customTextarea" placeholder="英语：中文=英文
+语文：直接写中文，每行一个"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn-ocr" id="cameraOcrBtn">📷 拍照识别</button>
+        <button class="btn-ocr" id="albumOcrBtn">🖼️ 相册识别</button>
+        <input type="file" id="cameraInput" accept="image/*" capture="camera">
+        <input type="file" id="albumInput" accept="image/*">
+      </div>
+      <div class="custom-btns">
+        <button id="saveCustomModuleBtn">保存模块</button>
+        <button id="importTxtBtn">导入TXT</button>
+        <button id="exportTxtBtn">导出TXT</button>
+        <input type="file" id="fileInput" accept=".txt">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== 工具函数模块 ====================
+const Utils = {
+  showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 2000);
+  },
+
+  downloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  shuffleArray(arr) {
+    const newArr = [...arr];
+    for (let i = newArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+  }
+};
+
+// ==================== 数据存储模块 ====================
+const Storage = {
+  PREFIX: 'dict_v2_',
+
+  get(key, defaultValue = null) {
+    try {
+      const data = localStorage.getItem(this.PREFIX + key);
+      return data ? JSON.parse(data) : defaultValue;
+    } catch (e) {
+      console.error('Storage get error:', e);
+      return defaultValue;
+    }
+  },
+
+  set(key, value) {
+    try {
+      localStorage.setItem(this.PREFIX + key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.error('Storage set error:', e);
+      Utils.showToast('保存失败，请检查存储空间');
+      return false;
+    }
+  }
+};
+
+// ==================== 内置数据模块 ====================
+const BuiltInData = {
+  TYPE: { EN: 'en', CN: 'cn' },
+  MODE: { NORMAL: 'normal', WRONG: 'wrong' },
+
+  EN_MODULES: {
+    m1: [{ cn: "认识你", en: "get to know you" }, { cn: "你好吗？", en: "How are you?" }, { cn: "做些木偶", en: "make some puppets" }, { cn: "和你的朋友一起玩", en: "play with your friends" }, { cn: "绘画并上色", en: "draw and colour" }, { cn: "剪下", en: "cut out" }, { cn: "粘在铅笔上", en: "stick on a pencil" }, { cn: "早上好", en: "good morning" }, { cn: "方老师", en: "Miss Fang" }, { cn: "男生女生们", en: "boys and girls" }, { cn: "张先生", en: "Mr Zhang" }, { cn: "下午好", en: "good afternoon" }, { cn: "王太太", en: "Mrs Wang" }, { cn: "放学后", en: "after school" }, { cn: "一个新老师", en: "a new teacher" }, { cn: "晚上好", en: "good evening" }, { cn: "非常好", en: "very well" }, { cn: "谢谢你", en: "thank you" }, { cn: "晚安", en: "good night" }, { cn: "喜欢蛋糕", en: "like cakes" }, { cn: "制作蛋糕", en: "make cakes" }, { cn: "在盘子上", en: "on the plate" }, { cn: "在桌子上", en: "on the table" }, { cn: "你的名字", en: "your name" }, { cn: "坐下", en: "sit down" }, { cn: "打开你的书", en: "open your book" }, { cn: "在纸上写我的名字", en: "write my name on the paper" }, { cn: "起立", en: "stand up" }, { cn: "关门", en: "close the door" }, { cn: "在教室里", en: "in the classroom" }, { cn: "看黑板", en: "look at the blackboard" }, { cn: "擦黑板", en: "clean the blackboard" }, { cn: "作张名片", en: "make a name card" }, { cn: "取张卡片", en: "get a card" }, { cn: "将卡片折起", en: "fold the card" }, { cn: "捡起你的铅笔", en: "pick up your pencil" }, { cn: "胖男人", en: "the fat man" }, { cn: "一罐果浆", en: "a jar of jam" }, { cn: "在他手里", en: "in his hand" }, { cn: "几岁", en: "how old" }, { cn: "祝你生日快乐!", en: "Happy Birthday to you!" }, { cn: "只有一岁", en: "only one year old" }, { cn: "生日聚会", en: "a birthday party" }, { cn: "吹灭蜡烛", en: "blow out the candles" }, { cn: "三岁", en: "three years old" }, { cn: "数到七", en: "count to seven" }, { cn: "画棵树", en: "draw a tree" }, { cn: "不会读或写", en: "can’t write or read" }, { cn: "一个中国女孩", en: "a Chinese girl" }, { cn: "一个日本男孩", en: "a Japanese boy" }, { cn: "和我一起学习", en: "study with me" }],
+    m2: [{ cn: "我的朋友", en: "my friends" }, { cn: "又高又胖", en: "tall and fat" }, { cn: "又矮又瘦", en: "short and thin" }, { cn: "看这男孩", en: "look at the boy" }, { cn: "看这女孩", en: "look at the girl" }, { cn: "八岁", en: "eight years old" }, { cn: "会踢足球", en: "can play football" }, { cn: "会唱歌", en: "can sing" }, { cn: "但不会游泳", en: "but can’t swim" }, { cn: "写写你的朋友", en: "write about your friends" }, { cn: "骑马", en: "ride a horse" }, { cn: "有10支红钢笔", en: "have ten red pens" }, { cn: "来自于他的朋友", en: "from his friends" }, { cn: "两个胖男孩", en: "two fat boys" }, { cn: "在雨中", en: "in the rain" }, { cn: "再鞠一躬", en: "bow again" }, { cn: "四个高个子老师", en: "four tall teachers" }, { cn: "八个小宝宝", en: "eight small babies" }, { cn: "十个矮个子妈妈", en: "ten short mothers" }, { cn: "我的家庭", en: "my family" }, { cn: "你的爷爷和奶奶", en: "your grandfather and grandmother" }, { cn: "他的爸爸和妈妈", en: "his father and mother" }, { cn: "她的哥哥和姐姐", en: "her brother and sister" }, { cn: "我们的叔叔和阿姨", en: "our uncles and aunts" }, { cn: "我的父母亲们", en: "my parents" }, { cn: "好朋友", en: "good friends" }, { cn: "请进来", en: "please come in" }, { cn: "王先生", en: "Mr Wang" }, { cn: "很高兴见到你", en: "nice to meet you" }, { cn: "我家的照片", en: "a picture of my family" }, { cn: "喜欢吃蛋糕", en: "like eating cakes" }, { cn: "喜欢踢足球", en: "like playing football" }, { cn: "踢得很好", en: "play it very well" }, { cn: "我的自行车和他的风筝", en: "my bicycle and his kite" }, { cn: "迈克的风筝", en: "Mike’s kite" }, { cn: "琳达和丹尼", en: "Linda and Danny" }, { cn: "在高高的天空中", en: "high in the sky" }, { cn: "关于我", en: "about me" }, { cn: "长发", en: "long hair" }, { cn: "眼睛和耳朵", en: "eyes and ears" }, { cn: "小鼻子和大嘴巴", en: "small noses and big mouths" }, { cn: "小巧和棕色", en: "small and brown" }, { cn: "小动物们", en: "little animals" }, { cn: "兔子和老鼠", en: "rabbits and mice" }, { cn: "狗和猫", en: "dogs and cats" }, { cn: "有条长尾巴", en: "have a long tail" }, { cn: "喜欢和我粉红色的球玩", en: "like playing with my pink ball" }, { cn: "吉姆的大猪", en: "Jim’s big pig" }, { cn: "玩棍子", en: "play with a stick" }],
+    m3: [{ cn: "场所与活动", en: "places and activities" }, { cn: "我的学校", en: "my school" }, { cn: "图书馆与操场", en: "the library and the playground" }, { cn: "大厅与卫生间", en: "the hall and the toilet" }, { cn: "你们的教室", en: "your classroom(s)" }, { cn: "新来的", en: "be new here" }, { cn: "不客气", en: "You’re welcome." }, { cn: "看这幅画", en: "look at the picture" }, { cn: "又大又漂亮", en: "big and nice" }, { cn: "在里面读写", en: "read and write in it" }, { cn: "载歌载舞", en: "sing and dance" }, { cn: "在那儿打篮球", en: "play basketball there" }, { cn: "今日将会阳光明媚", en: "will shine today" }, { cn: "完全，彻底", en: "all down the line" }, { cn: "升起", en: "go up" }, { cn: "降落", en: "go down" }, { cn: "拿着一张玫瑰花的老照片", en: "hold an old photo of a rose" }, { cn: "购物", en: "go shopping" }, { cn: "帮你", en: "help you" }, { cn: "买些苹果", en: "have some apples" }, { cn: "多少", en: "how many" }, { cn: "喜欢香蕉", en: "like bananas" }, { cn: "多少钱", en: "how much" }, { cn: "列张购物单", en: "make a shopping list" }, { cn: "在超市", en: "at the supermarket" }, { cn: "彼得和他的妈妈", en: "Peter and his mum" }, { cn: "许多玩具", en: "many toys" }, { cn: "买了一个足球", en: "buy a football" }, { cn: "也买了一些桃子和李子", en: "buy some peaches and plums too" }, { cn: "在商店", en: "in the shop" }, { cn: "在公园", en: "in the park" }, { cn: "什么颜色", en: "what colour" }, { cn: "看着这艘红色小舟", en: "look at the red boat" }, { cn: "有一个橙色的风筝", en: "have an orange kite" }, { cn: "这朵黄色的花儿", en: "this yellow flower" }, { cn: "把颜色混合", en: "mix the colours" }, { cn: "蓝绿相间", en: "blue and green" }, { cn: "白与黑", en: "white and black" }, { cn: "女孩的棕色气球", en: "the girl's brown balloon" }, { cn: "高又高", en: "high up high" }, { cn: "荡向碧蓝的天空中", en: "swing to the blue sky" }, { cn: "不知为何", en: "don't know why" }, { cn: "圆圆的太阳", en: "the round sun" }, { cn: "白云朵朵", en: "the white clouds" }, { cn: "快乐的小学生", en: "a happy pupil" }, { cn: "有些试管", en: "have some tubes" }, { cn: "演奏音乐", en: "make the music" }],
+    m4: [{ cn: "自然界", en: "the natural world" }, { cn: "红黑相间的瓢虫", en: "a red and black ladybird" }, { cn: "昆虫日", en: "an insect day" }, { cn: "黄紫相间的蝴蝶", en: "a yellow and purple butterfly" }, { cn: "棕色的猴子", en: "a brown monkey" }, { cn: "又小又黑的蚂蚁", en: "a small and black ant" }, { cn: "做一只纸蜜蜂", en: "make a paper bee" }, { cn: "讨论一下", en: "talk about" }, { cn: "看那些漂亮的蝴蝶们", en: "look at those beautiful butterflies" }, { cn: "一些鸭子", en: "some ducks" }, { cn: "喜欢跑", en: "like to run" }, { cn: "跑下", en: "run down" }, { cn: "跑上", en: "run up" }, { cn: "在农场", en: "on the farm" }, { cn: "小鸡和母鸡", en: "chicks and hens" }, { cn: "鸭和猪", en: "ducks and pigs" }, { cn: "狗和猫", en: "dogs and cats" }, { cn: "数数马匹", en: "count the horses" }, { cn: "凯蒂的梦", en: "Kitty's dream" }, { cn: "穿上我的鞋", en: "put on my shoes" }, { cn: "脱下", en: "take off" }, { cn: "开门", en: "open the door" }, { cn: "数数绵羊", en: "count the sheep" }, { cn: "关上大门", en: "close the gate" }, { cn: "那就是结尾", en: "that's the end" }, { cn: "看着这植物", en: "look at the plant" }, { cn: "在树枝上", en: "on the branch" }, { cn: "粗粗的树干", en: "a thick trunk" }, { cn: "又细又短的根", en: "thin and short roots" }, { cn: "嫩绿的小叶子", en: "green and small leaves" }, { cn: "粉红漂亮的花朵", en: "a pink and beautiful flower" }, { cn: "小小褐色的种子", en: "small and brown seeds" }, { cn: "雨天", en: "a rainy day" }, { cn: "在晴天里", en: "in a sunny day" }, { cn: "感到温暖", en: "feel warm" }, { cn: "也有幼芽", en: "have buds too" }, { cn: "不断生长", en: "grow and grow" }, { cn: "两朵向日葵", en: "two sunflowers" }, { cn: "多少", en: "how many" }, { cn: "绿色鸟儿", en: "green birds" }, { cn: "在树上", en: "on the tree" }, { cn: "在瓶子里", en: "in the bottle" }, { cn: "在盒子下", en: "under the box" }, { cn: "再数一遍", en: "count again" }, { cn: "告诉我", en: "tell me" }],
+  "m3B-Module-1/Unit-1-词汇": [
+    {"cn": "看见", "en": "see"},
+    {"cn": "听见", "en": "hear"},
+    {"cn": "其他，还有", "en": "else"},
+    {"cn": "交通工具", "en": "vehicle"},
+    {"cn": "轮船", "en": "ship"},
+    {"cn": "飞机", "en": "aeroplane (plane)"},
+    {"cn": "公共汽车", "en": "bus"},
+    {"cn": "小汽车", "en": "car"},
+    {"cn": "火车", "en": "train"},
+    {"cn": "出租车", "en": "taxi"},
+    {"cn": "摩托车", "en": "motorcycle"},
+    {"cn": "磁悬浮列车", "en": "Maglev"},
+    {"cn": "地铁", "en": "metro (subway, underground)"},
+    {"cn": "圆形", "en": "circle"},
+    {"cn": "使用", "en": "use"},
+    {"cn": "旋转", "en": "spin"},
+    {"cn": "转盘", "en": "spinner"},
+    {"cn": "牙签", "en": "toothpick"},
+    {"cn": "剪刀", "en": "scissors"},
+    {"cn": "蜡笔", "en": "crayon"},
+    {"cn": "孩子们", "en": "children (child)"},
+    {"cn": "雨滴", "en": "raindrop"},
+    {"cn": "雨声", "en": "pitter-patter"},
+    {"cn": "查利", "en": "Charlie"},
+    {"cn": "他们（宾格）", "en": "them (they, their)"},],
+ "m3B-Module-1/Unit-1-词组": [
+    {"cn": "驾驶一架飞机", "en": "fly an aeroplane"},
+    {"cn": "制作一架纸飞机", "en": "make a paper aeroplane"},
+    {"cn": "驾驶一辆车", "en": "drive a car"},
+    {"cn": "骑摩托车", "en": "ride a motorcycle"},
+    {"cn": "在公共汽车站", "en": "at the bus stop"},
+    {"cn": "地铁站", "en": "metro station"},
+    {"cn": "在窗边", "en": "by the window"},
+    {"cn": "看见一些孩子", "en": "see some children"},
+    {"cn": "做一个转盘", "en": "make a spinner"},
+    {"cn": "告诉你的同学们", "en": "tell your classmates"},
+    {"cn": "剪圆形", "en": "cut the circle"},
+    {"cn": "旋转转盘", "en": "spin the spinner"},
+    {"cn": "一把剪刀", "en": "a pair of scissors"},
+    {"cn": "使用牙签", "en": "use a toothpick"},
+    {"cn": "落下来", "en": "fall down"},
+    {"cn": "坐在椅子上", "en": "sit on the chair"},
+    ],
+ "m3B-Module-1/Unit-1-句子": [
+    {"cn": "我能用我的眼睛看见。", "en": "I can see with my eyes."},
+    {"cn": "你能用你的耳朵听见。", "en": "You can hear with your ears."},
+    {"cn": "听，本！你能听见什么？", "en": "Listen, Ben! What can you hear?"},
+    {"cn": "我能听见一艘船。", "en": "I can hear a ship."},
+    {"cn": "你还能听见（看见）什么？", "en": "What else can you hear (see)?"},
+    {"cn": "我能听见（看见）一架飞机。", "en": "Hmm... I can hear (see) an aeroplane."},
+    {"cn": "凯蒂，你能看见什么？", "en": "What can you see, Kitty?"},
+    {"cn": "我能看到一辆公共汽车还有一些小汽车。", "en": "I can see a bus and some cars too."},
+    {"cn": "我看不见他们，但是我能听见他们的声音。", "en": "I can't see them, but I can hear them."},
+    {"cn": "我听见雨点落下来。", "en": "I hear raindrops falling down."},
+    {"cn": "查利和他的小鸡正坐在椅子上。", "en": "Charlie and his chick are sitting on the chair."}
+  ],
+  "m3B-Module-1/Unit-2-词汇": [
+    {"cn": "碰，触摸", "en": "touch"},
+    {"cn": "感觉", "en": "feel"},
+    {"cn": "怎样", "en": "how"},
+    {"cn": "食物", "en": "food"},
+    {"cn": "饮料", "en": "drink"},
+    {"cn": "超市", "en": "supermarket"},
+    {"cn": "菠萝", "en": "pineapple"},
+    {"cn": "面包", "en": "bread"},
+    {"cn": "粗糙的", "en": "rough"},
+    {"cn": "光滑的", "en": "smooth"},
+    {"cn": "软的", "en": "soft"},
+    {"cn": "硬的", "en": "hard"},
+    {"cn": "得到", "en": "get"},
+    {"cn": "让", "en": "let (let's = let us, let me)"},
+    {"cn": "也，太", "en": "too (to, two)"},
+    {"cn": "粗的，厚的", "en": "thick"},
+    {"cn": "细的，薄的", "en": "thin"},
+    {"cn": "尖的", "en": "sharp"},
+    {"cn": "钝的", "en": "blunt"},
+    {"cn": "热的", "en": "hot"},
+    {"cn": "冷的", "en": "cold"},
+    {"cn": "温暖的", "en": "warm"},
+    {"cn": "凉爽的", "en": "cool"},
+    {"cn": "干净的", "en": "clean"},
+    {"cn": "脏的", "en": "dirty"},
+    {"cn": "手提包", "en": "handbag"},
+    {"cn": "地球", "en": "earth"},
+    {"cn": "助动词", "en": "do, does"},
+     ],
+  "m3B-Module-1/Unit-2-词组": [
+    {"cn": "摸这个桌子", "en": "touch the desk"},
+    {"cn": "摸这些玻璃杯", "en": "touch the smooth and hard glasses"},
+    {"cn": "感觉一下这个菠萝", "en": "feel the pineapple"},
+    {"cn": "感觉难过", "en": "feel sad"},
+    {"cn": "一杯水", "en": "a glass of water"},
+    {"cn": "一片面包", "en": "a piece of bread"},
+    {"cn": "在月球上", "en": "on the Moon"},
+    {"cn": "在地球上", "en": "on the Earth"},
+    {"cn": "在超市里", "en": "at the supermarket"},
+    {"cn": "太粗糙", "en": "too rough"},
+    {"cn": "拿一些食物", "en": "get some food"},
+    {"cn": "月球面包和一个月球派", "en": "Moon bread and a Moon pie"},
+    {"cn": "过来看看", "en": "come and see"},
+    {"cn": "读一个故事", "en": "read a story"},
+     ],
+  "m3B-Module-1/Unit-2-句子": [
+    {"cn": "艾丽丝，请摸摸这个包。", "en": "Please touch the bag, Alice. (= Touch the bag please, Alice.)"},
+    {"cn": "它感觉怎么样？", "en": "How does it feel?"},
+    {"cn": "它又软又粗糙。", "en": "It's rough and soft."},
+    {"cn": "它们感觉怎么样？", "en": "How do they feel?"},
+    {"cn": "它们又滑又硬。", "en": "They're smooth and hard."},
+    {"cn": "这个香蕉是软的，但是那个香蕉不是。", "en": "This banana is soft, but that one isn't."},
+    {"cn": "让我们去并拿一些食物吧。", "en": "Let's go and get some food."},
+    {"cn": "好的。", "en": "O.K."},
+    {"cn": "那是什么？", "en": "What's that?"},
+    {"cn": "它是月球面包。", "en": "It's Moon bread."},
+    {"cn": "噢，它太硬了。", "en": "Oh, it's too hard."},
+    {"cn": "它是一个月球派。", "en": "It's a Moon pie."},
+    {"cn": "我喜欢这个月球派。", "en": "I like the Moon pie."},
+    {"cn": "我也是。", "en": "Me too."},
+    {"cn": "多少钱？", "en": "How much?"},
+    {"cn": "十月球币。", "en": "Ten Moon yuan."},
+    {"cn": "我能用我的手和手指触摸东西并感觉。", "en": "I can touch and feel with my hands and fingers."},
+    {"cn": "我能用我的眼睛和耳朵看见和听见。", "en": "I can see and hear with my eyes and ears."}
+  ],
+  "m3B-Module-1/Unit-3-词汇": [
+    {"cn": "柠檬", "en": "lemon"},
+    {"cn": "柠檬汁", "en": "lemonade"},
+    {"cn": "咖啡", "en": "coffee"},
+    {"cn": "盐", "en": "salt"},
+    {"cn": "白砂糖", "en": "sugar"},
+    {"cn": "甜的，糖", "en": "sweet"},
+    {"cn": "苦的", "en": "bitter"},
+    {"cn": "酸的", "en": "sour"},
+    {"cn": "咸的", "en": "salty"},
+    {"cn": "臭的", "en": "smelly"},
+    {"cn": "辛辣的", "en": "spicy"},
+    {"cn": "热的", "en": "hot"},
+    {"cn": "品尝", "en": "taste"},
+    {"cn": "闻，气味", "en": "smell"},
+    {"cn": "胡椒（粉），辣椒", "en": "pepper"},
+    {"cn": "好吃的，好闻的", "en": "nice"},
+    {"cn": "腥味的", "en": "fishy"},
+    {"cn": "虾", "en": "prawn"},
+    {"cn": "舌头", "en": "tongue"},
+    {"cn": "鲸", "en": "whale"},
+    {"cn": "有时", "en": "sometimes"},
+    {"cn": "睡", "en": "sleep"},
+    {"cn": "照片", "en": "photo (photograph)"},
+    ],
+  "m3B-Module-1/Unit-3-词组": [
+    {"cn": "尝尝这个苹果", "en": "taste this apple"},
+    {"cn": "闻闻这个柠檬", "en": "smell these strawberries"},
+    {"cn": "在水果店", "en": "at the fruit shop"},
+    {"cn": "一些甜的糖果", "en": "some sweet sweets"},
+    {"cn": "十一杯咖啡", "en": "eleven cups of coffee"},
+    {"cn": "一瓶盐", "en": "a bottle of salt"},
+    {"cn": "喝红茶", "en": "drink black tea"},
+    {"cn": "在晚上", "en": "at night"},
+    {"cn": "上床睡觉", "en": "go to sleep (go to bed)"},
+    {"cn": "他的玩具鲸鱼", "en": "his toy whale"},
+    {"cn": "它的白尾巴", "en": "its white tail"},
+    ],
+  "m3B-Module-1/Unit-3-句子": [
+    {"cn": "闭上你的眼睛。", "en": "Close your eyes."},
+    {"cn": "张开我们的嘴。", "en": "Open our mouths."},
+    {"cn": "闻闻这个。这个柠檬的气味怎么样？", "en": "Smell this. How does the lemon smell?"},
+    {"cn": "它很香。", "en": "It's nice."},
+    {"cn": "现在尝尝这个柠檬。它的味道怎么样？", "en": "Now taste the lemon. How does it taste?"},
+    {"cn": "噢，它很酸的。", "en": "Oh, it's very sour."},
+    {"cn": "我能买一些苹果吗？", "en": "May I have some apples, please?"},
+    {"cn": "当然可以。", "en": "Sure. Certainly."},
+    {"cn": "不要在晚上喝它。否则你一定会睡不着。", "en": "Don't drink it at night. Or you can't sleep right."},
+    {"cn": "他可以用他的鼻子闻。", "en": "He can smell with his nose."},
+    {"cn": "她可以用她的舌头品尝。", "en": "She can taste with her tongue."},
+    {"cn": "你能在照片里看见什么？", "en": "What can you see in the photograph?"},
+    {"cn": "我能看见怀特先生。（格林小姐）", "en": "I can see Mr White. (Miss Green)"}
+  ],
+  "m3B-Module-2/Unit-1-词汇": [
+    {"cn": "种类，亲切的", "en": "kind"},
+    {"cn": "老虎", "en": "tiger"},
+    {"cn": "狮子", "en": "lion"},
+    {"cn": "公牛", "en": "bull"},
+    {"cn": "熊猫", "en": "panda"},
+    {"cn": "猴子", "en": "monkey"},
+    {"cn": "蛇", "en": "snake"},
+    {"cn": "斑马", "en": "zebra"},
+    {"cn": "长颈鹿", "en": "giraffe"},
+    {"cn": "河马", "en": "hippo"},
+    {"cn": "狼", "en": "wolf"},
+    {"cn": "恐龙", "en": "dinosaur"},
+    {"cn": "袋鼠", "en": "kangaroo"},
+    {"cn": "蜥蜴", "en": "lizard"},
+    {"cn": "孔雀", "en": "peacock"},
+    {"cn": "豹", "en": "leopard"},
+    {"cn": "海豚", "en": "dolphin"},
+    {"cn": "鲨鱼", "en": "shark"},
+    {"cn": "聪明的", "en": "clever"},
+    {"cn": "愚蠢的", "en": "foolish"},
+    {"cn": "强壮的", "en": "strong"},
+    {"cn": "虚弱的", "en": "weak"},
+    {"cn": "生气的，愤怒的", "en": "angry"},
+    {"cn": "帽子", "en": "hat"},
+    {"cn": "休息", "en": "rest"},
+    {"cn": "最后", "en": "finally (at last)"},
+    {"cn": "石头", "en": "rock"},
+    {"cn": "钟", "en": "clock"},
+    {"cn": "点钟", "en": "o'clock"},
+    {"cn": "拿", "en": "take"},
+    {"cn": "取", "en": "get"},
+    ],
+  "m3B-Module-2/Unit-1-词组": [
+    {"cn": "我最喜爱的动物", "en": "my favourite animal"},
+    {"cn": "各种各样的动物（肉）", "en": "all kinds of animals (meat)"},
+    {"cn": "许多聪明的猴子", "en": "many clever monkeys"},
+    {"cn": "一只愤怒的公牛", "en": "an angry bull"},
+    {"cn": "这么强壮", "en": "so strong"},
+    {"cn": "一个炎热的夏日", "en": "a hot summer day"},
+    {"cn": "白叔叔与王阿姨", "en": "Uncle Bai and Aunt Wang"},
+    {"cn": "休息", "en": "take a rest (have a rest)"},
+    {"cn": "坐在树下", "en": "sit under the tree"},
+    {"cn": "拿他的帽子", "en": "take his hat"},
+    {"cn": "跳进水里", "en": "jump into the water"},
+    {"cn": "取回他的帽子", "en": "get his hats back"},
+    {"cn": "在六点", "en": "at six o'clock"},
+    {"cn": "坐在石头上", "en": "sit on a rock"},
+    {"cn": "回来", "en": "come back"},
+    {"cn": "回去", "en": "go back"},
+    ],
+  "m3B-Module-2/Unit-1-句子": [
+    {"cn": "你（你们）喜欢大象吗？", "en": "Do you like elephants?"},
+    {"cn": "是的，我（我们）喜欢。", "en": "Yes, I (we) do."},
+    {"cn": "不，我（我们）不喜欢。", "en": "No, I (we) don't."},
+    {"cn": "丹尼喜欢狐狸吗？", "en": "Does Danny like foxes?"},
+    {"cn": "是的，他喜欢。", "en": "Yes, he does."},
+    {"cn": "不，他不喜欢。", "en": "No, he doesn't."},
+    {"cn": "你的朋友们喜欢什么动物？", "en": "What animals do your friends like?"},
+    {"cn": "他们喜欢狼。", "en": "They like wolves."},
+    {"cn": "我们能在动物园里看见各种各样的动物。", "en": "We can see all kinds of animals in the zoo."},
+    {"cn": "杰克有一只钟。它滴答滴答地响。", "en": "Jack has a clock. It goes tick-tock, tick-tock."},
+    {"cn": "一些猴子拿走了他的帽子，跳进了树丛中。", "en": "Some monkeys take his hats and jump into the tree."},
+    {"cn": "最后，他取回了他的帽子。", "en": "Finally, he gets his hats back."}
+  ],
+  "m3B-Module-2/Unit-2-词汇": [
+    {"cn": "玩具", "en": "toy"},
+    {"cn": "玩具娃娃", "en": "doll"},
+    {"cn": "滑板", "en": "skateboard"},
+    {"cn": "机器人", "en": "robot"},
+    {"cn": "飞碟", "en": "Frisbee"},
+    {"cn": "拼图", "en": "puzzle"},
+    {"cn": "溜溜球", "en": "yo-yo"},
+    {"cn": "呼啦圈", "en": "hoop"},
+    {"cn": "玩偶盒", "en": "Jack-in-the-box"},
+    {"cn": "积木", "en": "brick"},
+    {"cn": "锡纸", "en": "foil"},
+    {"cn": "胶水", "en": "glue"},
+    {"cn": "纽扣", "en": "button"},
+    {"cn": "粘贴，小棒", "en": "stick"},
+    {"cn": "一起", "en": "together"},
+    {"cn": "乐趣，有趣的", "en": "fun (funny)"},
+    {"cn": "墙", "en": "wall"},
+    {"cn": "在...后面", "en": "behind"},
+    {"cn": "在...前面", "en": "in front of"},
+    {"cn": "在...旁边", "en": "beside"},
+    {"cn": "在...附近", "en": "near"},
+    {"cn": "在...里面", "en": "in"},
+    {"cn": "在...外面", "en": "out"},
+    {"cn": "在...上面", "en": "on"},
+    {"cn": "在...下面", "en": "under"},
+    ],
+  "m3B-Module-2/Unit-2-词组": [
+    {"cn": "这个可爱的玩具娃娃", "en": "this lovely doll"},
+    {"cn": "这些玩具火车", "en": "these toy trains"},
+    {"cn": "一只有趣的玩具熊", "en": "a funny toy bear"},
+    {"cn": "做一个机器人", "en": "make a robot"},
+    {"cn": "和你的朋友一起玩", "en": "play with your friend"},
+    {"cn": "粘贴盒子", "en": "stick the boxes"},
+    {"cn": "一张锡纸", "en": "a piece of foil"},
+    {"cn": "一些纽扣", "en": "some round buttons"},
+    {"cn": "一瓶胶水", "en": "a bottle of glue"},
+    {"cn": "站在墙的后面", "en": "stand behind the wall"},
+    {"cn": "坐在桌子旁边", "en": "sit beside the desk"},
+    {"cn": "在墙上", "en": "on the wall"},
+    {"cn": "在超市附近", "en": "near the supermarket"},
+    {"cn": "游泳游得非常好", "en": "swim very well"},
+    ],
+  "m3B-Module-2/Unit-2-句子": [
+    {"cn": "你(你们)喜欢什么？", "en": "What do you like?"},
+    {"cn": "我（我们）喜欢滑板。", "en": "I (We) like skateboards."},
+    {"cn": "你(们)不喜欢什么？", "en": "What don't you like?"},
+    {"cn": "我（我们）不喜欢玩具火车。", "en": "I (We) don't like toy trains."},
+    {"cn": "你的父亲喜欢什么？", "en": "What does your father like?"},
+    {"cn": "他喜欢机器人。", "en": "He likes robots."},
+    {"cn": "他不喜欢洋娃娃。", "en": "He doesn't like dolls."},
+    {"cn": "我喜欢这个粉红的洋娃娃，但是我不喜欢那个蓝色的。", "en": "I like this pink doll, but I don't like that blue one."},
+    {"cn": "让我们一起玩吧。让我们一起去上学吧。", "en": "Let's play together. Let's go to school together."},
+    {"cn": "好的。", "en": "Ok. All right. Let's."},
+    {"cn": "他能滑滑板滑得很好。", "en": "He can ride the skateboard very well."},
+    {"cn": "这很有趣。", "en": "It's fun."},
+    {"cn": "对不起。你还好吗？", "en": "I'm sorry. Are you OK?"},
+    {"cn": "没关系。", "en": "That's all right."},
+    {"cn": "一个小女孩和一个高男孩正站在墙的后面。", "en": "A small girl and a tall boy are standing behind the wall."}
+  ]
+  },
+
+  CN_MODULES: {
+     yw2: [{ cn: "乌黑" }, { cn: "活泼" }, { cn: "春日" }, { cn: "轻风" }, { cn: "吹拂" }, { cn: "洒落" }, { cn: "赶集" }, { cn: "聚拢" }, { cn: "形成" }, { cn: "加入" }, { cn: "春光" }, { cn: "平添" }, { cn: "稻田" }, { cn: "湖面" }, { cn: "闲散" }, { cn: "纤细" }],
+    yw3: [{ cn: "荷花" }, { cn: "清香" }, { cn: "花瓣" }, { cn: "莲蓬" }, { cn: "破裂" }, { cn: "姿势" }, { cn: "眼前" }, { cn: "本领" }, { cn: "仿佛" }, { cn: "微风" }, { cn: "翩翩起舞" }, { cn: "随风" }, { cn: "飘动" }, { cn: "舞蹈" }, { cn: "停止" }],
+    yw6: [{ cn: "国王" }, { cn: "骄傲" }, { cn: "傲慢" }, { cn: "谦虚" }, { cn: "懦弱" }, { cn: "神气" }, { cn: "住嘴" }, { cn: "恼怒" }, { cn: "相提并论" }, { cn: "走着瞧" }, { cn: "王朝" }, { cn: "尘土" }, { cn: "惊讶" }, { cn: "光洁" }, { cn: "美观" }, { cn: "古代" }, { cn: "价值" }, { cn: "动手" }],
+    yw7: [{ cn: "池塘" }, { cn: "痛快" }, { cn: "欣赏" }, { cn: "身段" }, { cn: "匀称" }, { cn: "别致" }, { cn: "不禁" }, { cn: "机灵" }, { cn: "哎呀" }, { cn: "狮子" }, { cn: "犹豫" }, { cn: "灰心丧气" }, { cn: "机会" }, { cn: "叹气" }, { cn: "逃生" }],
+    yw10: [{ cn: "造纸术" }, { cn: "世界" }, { cn: "伟大" }, { cn: "贡献" }, { cn: "记录" }, { cn: "保存" }, { cn: "需要" }, { cn: "制作" }, { cn: "大约" }, { cn: "吸收" }, { cn: "经验" }, { cn: "原料" }, { cn: "满足" }, { cn: "朝鲜" }, { cn: "半岛" }, { cn: "日本" }, { cn: "阿拉伯" }, { cn: "欧洲" }, { cn: "社会" }],
+    yw11: [{ cn: "赵州桥" }, { cn: "石匠" }, { cn: "设计" }, { cn: "创举" }, { cn: "冲击" }, { cn: "不但" }, { cn: "而且" }, { cn: "各自" }, { cn: "似乎" }, { cn: "体现" }, { cn: "人民" }, { cn: "智慧" }, { cn: "才干" }, { cn: "历史" }],
+    yw13: [{ cn: "争奇斗艳" }, { cn: "芬芳" }, { cn: "迷人" }, { cn: "艳丽" }, { cn: "醒来" }, { cn: "万寿菊" }, { cn: "欣然" }, { cn: "苏醒" }, { cn: "关系" }, { cn: "适宜" }, { cn: "适应" }, { cn: "淡雅" }, { cn: "展示" }, { cn: "修建" }, { cn: "组成" }],
+    yw14: [{ cn: "蜜蜂" }, { cn: "辨认" }, { cn: "能力" }, { cn: "大概" }, { cn: "阻力" }, { cn: "将近" }, { cn: "包括" }, { cn: "检查" }, { cn: "迷失" }, { cn: "准确" }, { cn: "无误" }, { cn: "尽管" }, { cn: "逆风" }, { cn: "沿途" }, { cn: "陌生" }, { cn: "确实" }, { cn: "超常" }, { cn: "记忆" }, { cn: "本能" }],
+    yw16: [{ cn: "星空" }, { cn: "流淌" }, { cn: "秘密" }, { cn: "楼梯" }, { cn: "相遇" }, { cn: "铃声" }, { cn: "思绪" }, { cn: "瞬间" }],
+    yw17: [{ cn: "形状" }, { cn: "狐狸" }, { cn: "担心" }, { cn: "丁零" }, { cn: "失望" }, { cn: "巧克力" }, { cn: "香肠" }, { cn: "面包" }, { cn: "花生" }, { cn: "牛奶" }, { cn: "继续" }, { cn: "想念" }, { cn: "饭菜" }, { cn: "排骨" }, { cn: "麻烦" }, { cn: "了解" }],
+    yw18: [{ cn: "水墨画" }, { cn: "垂柳" }, { cn: "梳妆" }, { cn: "钓竿" }, { cn: "扇动" }, { cn: "戏耍" }, { cn: "拨动" }, { cn: "浪花" }, { cn: "葫芦" }, { cn: "松树" }, { cn: "洗澡" }, { cn: "清爽" }, { cn: "松针" }, { cn: "蘑菇" }],
+    yw19: [{ cn: "大师" }, { cn: "表弟" }, { cn: "胆小" }, { cn: "姑父" }, { cn: "理发" }, { cn: "欢迎" }, { cn: "仇人" }, { cn: "摆布" }, { cn: "习惯" }, { cn: "受刑" }, { cn: "双倍" }, { cn: "过年" }, { cn: "央求" }, { cn: "虽然" }],
+    yw20: [{ cn: "天分" }, { cn: "厘米" }, { cn: "肥皂泡" }, { cn: "种类" }, { cn: "其中" }, { cn: "网球" }, { cn: "透明" }, { cn: "分裂" }, { cn: "形式" }, { cn: "圆满" }, { cn: "飞越" }, { cn: "熟睡" }, { cn: "婴儿" }, { cn: "目送" }, { cn: "希望" }],
+    yw22: [{ cn: "奇妙" }, { cn: "呈现" }, { cn: "降落" }, { cn: "映射" }, { cn: "变幻" }, { cn: "奇迹" }, { cn: "诱人" }, { cn: "圆润" }, { cn: "感叹" }, { cn: "光辉" }, { cn: "光芒" }, { cn: "飞翔" }, { cn: "冰柱" }, { cn: "锋利" }, { cn: "刀剑" }, { cn: "珍珠" }, { cn: "普通" }, { cn: "模型" }, { cn: "存在" }],
+    yw23: [{ cn: "海底" }, { cn: "宁静" }, { cn: "器官" }, { cn: "是否" }, { cn: "窃窃私语" }, { cn: "行进" }, { cn: "海参" }, { cn: "肌肉" }, { cn: "伸缩" }, { cn: "攻击" }, { cn: "反推力" }, { cn: "后退" }, { cn: "轮船" }, { cn: "长途" }, { cn: "细胞" }, { cn: "陆地" }],
+    yw24: [{ cn: "火烧云" }, { cn: "晚饭" }, { cn: "笑盈盈" }, { cn: "胡子" }, { cn: "红彤彤" }, { cn: "金灿灿" }, { cn: "葡萄" }, { cn: "脖子" }, { cn: "凶猛" }, { cn: "威武" }, { cn: "镇静" }],
+    yw25: [{ cn: "性子" }, { cn: "顾客" }, { cn: "布料" }, { cn: "交货" }, { cn: "箱子" }, { cn: "笑话" }, { cn: "大方" }, { cn: "夸奖" }, { cn: "实在" }, { cn: "提前" }, { cn: "服务" }, { cn: "袖子" }, { cn: "衬衫" }, { cn: "负责" }, { cn: "名声" }, { cn: "泄气" }, { cn: "手艺" }, { cn: "感动" }],
+    yw27: [{ cn: "里屋" }, { cn: "莫非" }, { cn: "厉害" }, { cn: "走南闯北" }, { cn: "发抖" }, { cn: "松手" }, { cn: "跟前" }, { cn: "甘心" }]
+  }
+};
+
+// ==================== 应用状态管理 ====================
+class AppState {
+  constructor() {
+    this.curType = BuiltInData.TYPE.EN;
+    this.mode = BuiltInData.MODE.NORMAL;
+    
+    // 播放状态
+    this.play = {
+      [BuiltInData.TYPE.EN]: { playList: [], currentIndex: 0, isPlaying: false },
+      [BuiltInData.TYPE.CN]: { playList: [], currentIndex: 0, isPlaying: false }
+    };
+
+    // 数据
+    this.custom = Storage.get('custom', { en: {}, cn: {} });
+    this.wrongList = Storage.get('wrongList', { en: [], cn: [] });
+    this.recList = Storage.get('recList', []);
+    
+    // 定时器
+    this.timer = null;
+    this.countdownTimer = null;
+  }
+
+  get modules() {
+    return {
+      [BuiltInData.TYPE.EN]: { ...BuiltInData.EN_MODULES, ...this.custom.en },
+      [BuiltInData.TYPE.CN]: { ...BuiltInData.CN_MODULES, ...this.custom.cn }
+    };
+  }
+
+  get currentPlayState() {
+    return this.play[this.curType];
+  }
+
+  get currentModules() {
+    return this.modules[this.curType];
+  }
+
+  get currentWrongList() {
+    return this.wrongList[this.curType];
+  }
+
+  saveCustom() { Storage.set('custom', this.custom); }
+  saveWrongList() { Storage.set('wrongList', this.wrongList); }
+  saveRecList() { Storage.set('recList', this.recList); }
+}
+
+// ==================== UI控制器 ====================
+class UIController {
+  constructor(state) {
+    this.state = state;
+    this.dom = {};
+    this.initDOM();
+  }
+
+  initDOM() {
+    const ids = [
+      'moduleSel', 'delCustomModuleBtn', 'dictModeRow', 'dictModeSel', 'langRow', 'langSel', 'voiceSel',
+      'speedSel', 'playModeSel', 'baseDelaySel', 'extraSecSel', 'repeatTimesSel', 'loopSwitch',
+      'togglePlayBtn', 'prevBtn', 'nextBtn', 'markBtn', 'resetBtn', 'openCustomModalBtn', 'wrongDictBtn',
+      'answerBox', 'toggleAnswerBtn', 'speakAnswerBtn', 'wrongList', 'clearWrongBtn', 'addWrongBtn', 'exportWrongBtn',
+      'customModal', 'closeCustomModalBtn', 'customModuleNameInput', 'customTextarea', 'saveCustomModuleBtn',
+      'importTxtBtn', 'exportTxtBtn', 'fileInput', 'cameraOcrBtn', 'albumOcrBtn', 'cameraInput', 'albumInput',
+      'recordBtn', 'stopRecordBtn', 'manageVoiceBtn', 'voiceManage', 'voiceList', 'recordAudio',
+      'wordText', 'status', 'progress', 'countdown', 'modeTagBox', 'toggleMoreBtn', 'moreSettings', 'ocrBtn', 'customModalTitle'
+    ];
+    ids.forEach(id => this.dom[id] = document.getElementById(id));
+    this.dom.typeTabs = document.querySelectorAll('.type-tab');
+  }
+
+  updateTypeTabs() {
+    this.dom.typeTabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.type === this.state.curType);
+    });
+  }
+
+  updateUIType() {
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+    this.dom.dictModeRow.style.display = isEn ? 'flex' : 'none';
+    this.dom.langRow.style.display = isEn ? 'flex' : 'none';
+    this.dom.customModalTitle.textContent = isEn ? '自定义英语模块' : '自定义语文模块';
+  }
+
+  updateModuleList() {
+    const sel = this.dom.moduleSel;
+    sel.innerHTML = '';
+    const modules = this.state.currentModules;
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+
+    const builtInGroup = document.createElement('optgroup');
+    builtInGroup.label = isEn ? '📚 英语内置模块' : '📖 语文三年级下册';
+    
+    const customGroup = document.createElement('optgroup');
+    customGroup.label = '✏️ 自定义模块';
+
+    Object.keys(modules).forEach(key => {
+      const option = document.createElement('option');
+      option.value = key;
+      
+      if ((isEn && key.startsWith('m')) || (!isEn && key.startsWith('yw'))) {
+        option.textContent = isEn ? `Module ${key.replace('m', '')}` : `第${key.replace('yw', '')}课`;
+        builtInGroup.appendChild(option);
+      } else {
+        option.textContent = key;
+        customGroup.appendChild(option);
+      }
+    });
+
+    sel.appendChild(builtInGroup);
+    if (customGroup.children.length > 0) sel.appendChild(customGroup);
+    
+    this.dom.delCustomModuleBtn.disabled = this.isBuiltInModule(sel.value);
+  }
+
+  isBuiltInModule(key) {
+    return this.state.curType === BuiltInData.TYPE.EN 
+      ? BuiltInData.EN_MODULES.hasOwnProperty(key) 
+      : BuiltInData.CN_MODULES.hasOwnProperty(key);
+  }
+
+  updateProgress() {
+    const ps = this.state.currentPlayState;
+    const total = ps.playList.length;
+    const current = ps.currentIndex + 1;
+    this.dom.progress.textContent = `${current > total ? 0 : current}/${total}`;
+  }
+
+  updatePlayButton(isPlaying) {
+    if (isPlaying) {
+      this.dom.togglePlayBtn.textContent = '暂停';
+      this.dom.togglePlayBtn.className = 'btn-pause';
+      this.dom.status.textContent = '播放中';
+     this.dom.status.className = 'status status-playing';
+    } else {
+      this.dom.togglePlayBtn.textContent = '开始';
+      this.dom.togglePlayBtn.className = 'btn-start';
+      this.dom.status.textContent = '已暂停';
+      this.dom.status.className = 'status status-paused';
+    }
+  }
+
+  updateWordText(text) {
+  
+    this.dom.wordText.textContent = text;
+  }
+
+  updateCountdown(sec) {
+    this.dom.countdown.textContent = sec ? `剩余：${sec}秒` : '';
+  }
+
+  updateModeTag() {
+    this.dom.modeTagBox.innerHTML = this.state.mode === BuiltInData.MODE.WRONG
+      ? '<span class="mode-tag">易错词听写</span>'
+      : '';
+  }
+
+  updateWrongList() {
+    const list = this.state.currentWrongList;
+    this.dom.wrongList.innerHTML = '';
+    
+    if (list.length === 0) {
+      this.dom.wrongList.innerHTML = '<div style="text-align:center;color:#999;padding:10px;">暂无易错词</div>';
+      return;
+    }
+
+    list.forEach((item, index) => {
+      const el = document.createElement('div');
+      el.className = 'wrongItem';
+      el.innerHTML = `
+        <span>${item.cn} ${item.en ? '→ ' + item.en : ''}</span>
+        <button onclick="app.deleteWrongWord(${index})">删</button>
+      `;
+      this.dom.wrongList.appendChild(el);
+    });
+  }
+
+  updateVoiceList(voices) {
+    this.dom.voiceSel.innerHTML = '';
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.name;
+      this.dom.voiceSel.appendChild(opt);
+    });
+  }
+
+  updateRecordingList() {
+    this.dom.voiceList.innerHTML = '';
+    if (this.state.recList.length === 0) {
+      this.dom.voiceList.innerHTML = '<div style="text-align:center;color:#999;padding:10px;">暂无录音</div>';
+      return;
+    }
+
+    this.state.recList.forEach((rec, index) => {
+      const el = document.createElement('div');
+      el.className = 'voice-item';
+      el.innerHTML = `
+        <span>${rec.name}</span>
+        <button onclick="app.deleteRecording(${index})">删</button>
+      `;
+      this.dom.voiceList.appendChild(el);
+    });
+  }
+
+  showAnswer(item) {
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+    const dictMode = this.dom.dictModeSel.value;
+
+    let html = '';
+    if (isEn) {
+      if (dictMode === 'cn') {
+        html = `<div class="primary">中文：${item.cn}</div><div class="secondary">英文：${item.en}</div>`;
+      } else {
+        html = `<div class="primary">英文：${item.en}</div><div class="secondary">中文：${item.cn}</div>`;
+      }
+    } else {
+      html = `<div class="primary">默写内容：${item.cn}</div>`;
+    }
+
+    this.dom.answerBox.innerHTML = html;
+    this.dom.answerBox.style.display = 'block';
+    this.dom.toggleAnswerBtn.textContent = '隐藏答案';
+    this.dom.speakAnswerBtn.style.display = 'inline-block';
+  }
+
+  hideAnswer() {
+    this.dom.answerBox.style.display = 'none';
+    this.dom.toggleAnswerBtn.textContent = '显示答案';
+    this.dom.speakAnswerBtn.style.display = 'none';
+  }
+
+  toggleMoreSettings() {
+    this.dom.moreSettings.style.display = this.dom.moreSettings.style.display === 'block' ? 'none' : 'block';
+  }
+
+  openCustomModal() {
+    this.dom.customModuleNameInput.value = '';
+    this.dom.customTextarea.value = '';
+    this.dom.customModal.style.display = 'flex';
+  }
+
+  closeCustomModal() {
+    this.dom.customModal.style.display = 'none';
+  }
+
+  resetUI() {
+    this.updateWordText('准备开始');
+    this.updateCountdown('');
+    this.hideAnswer();
+  }
+}
+
+// ==================== 主应用类 ====================
+class DictApp {
+  constructor() {
+    this.state = new AppState();
+    this.ui = new UIController(this.state);
+    this.bindEvents();
+    this.init();
+    window.app = this;
+  }
+
+  init() {
+    this.ui.updateTypeTabs();
+    this.ui.updateUIType();
+    this.ui.updateModuleList();
+    this.ui.updateWrongList();
+    this.initPlayList(this.ui.dom.moduleSel.value);
+    this.ui.updateProgress();
+    this.loadSystemVoices();
+  }
+
+  bindEvents() {
+    // 类型切换
+    this.ui.dom.typeTabs.forEach(tab => {
+      tab.addEventListener('click', () => this.switchType(tab.dataset.type));
+    });
+
+    // 播放控制
+    this.ui.dom.togglePlayBtn.addEventListener('click', () => this.togglePlay());
+    this.ui.dom.prevBtn.addEventListener('click', () => this.prevWord());
+    this.ui.dom.nextBtn.addEventListener('click', () => this.nextWord());
+    this.ui.dom.markBtn.addEventListener('click', () => this.markWrongWord());
+    this.ui.dom.resetBtn.addEventListener('click', () => this.reset());
+
+    // 模块控制
+    this.ui.dom.moduleSel.addEventListener('change', () => this.switchModule());
+    this.ui.dom.delCustomModuleBtn.addEventListener('click', () => this.deleteCustomModule());
+    this.ui.dom.playModeSel.addEventListener('change', () => this.switchPlayMode());
+
+    // 其他设置
+    this.ui.dom.toggleMoreBtn.addEventListener('click', () => this.ui.toggleMoreSettings());
+
+    // 易错词
+    this.ui.dom.wrongDictBtn.addEventListener('click', () => this.toggleWrongMode());
+    this.ui.dom.clearWrongBtn.addEventListener('click', () => this.clearWrongWords());
+    this.ui.dom.addWrongBtn.addEventListener('click', () => this.addWrongWordManually());
+    this.ui.dom.exportWrongBtn.addEventListener('click', () => this.exportWrongWords());
+
+    // 答案
+    this.ui.dom.toggleAnswerBtn.addEventListener('click', () => this.toggleAnswer());
+    this.ui.dom.speakAnswerBtn.addEventListener('click', () => this.speakAnswer());
+
+    // 自定义模块
+    this.ui.dom.openCustomModalBtn.addEventListener('click', () => this.ui.openCustomModal());
+    this.ui.dom.closeCustomModalBtn.addEventListener('click', () => this.ui.closeCustomModal());
+    this.ui.dom.saveCustomModuleBtn.addEventListener('click', () => this.saveCustomModule());
+    this.ui.dom.importTxtBtn.addEventListener('click', () => this.ui.dom.fileInput.click());
+    this.ui.dom.exportTxtBtn.addEventListener('click', () => this.exportModuleToTxt());
+    this.ui.dom.fileInput.addEventListener('change', (e) => this.importTxtFile(e));
+
+    // OCR
+    this.ui.dom.ocrBtn.addEventListener('click', () => {
+      this.ui.openCustomModal();
+      setTimeout(() => this.ui.dom.albumInput.click(), 300);
+    });
+    this.ui.dom.cameraOcrBtn.addEventListener('click', () => this.ui.dom.cameraInput.click());
+    this.ui.dom.albumOcrBtn.addEventListener('click', () => this.ui.dom.albumInput.click());
+    this.ui.dom.cameraInput.addEventListener('change', (e) => this.handleOCR(e));
+    this.ui.dom.albumInput.addEventListener('change', (e) => this.handleOCR(e));
+
+    // 录音
+    this.ui.dom.recordBtn.addEventListener('click', () => this.startRecording());
+    this.ui.dom.stopRecordBtn.addEventListener('click', () => this.stopRecording());
+    this.ui.dom.manageVoiceBtn.addEventListener('click', () => {
+      this.ui.dom.voiceManage.style.display = this.ui.dom.voiceManage.style.display === 'block' ? 'none' : 'block';
+      this.ui.updateRecordingList();
+    });
+
+    // 页面点击激活语音
+    document.addEventListener('click', () => {
+      if (!this.state.voiceInited) {
+        this.state.voiceInited = true;
+        this.loadSystemVoices();
+      }
+    });
+  }
+
+  switchType(type) {
+    if (type === this.state.curType) return;
+    this.stopAll();
+    this.state.curType = type;
+    this.state.mode = BuiltInData.MODE.NORMAL;
+    this.ui.updateTypeTabs();
+    this.ui.updateUIType();
+    this.ui.updateModuleList();
+    this.ui.updateWrongList();
+    this.ui.updateModeTag();
+    this.initPlayList(this.ui.dom.moduleSel.value);
+    this.ui.updateProgress();
+    this.ui.resetUI();
+  }
+
+  initPlayList(moduleKey) {
+    const ps = this.state.currentPlayState;
+    const data = this.state.currentModules[moduleKey] || [];
+    
+    if (this.ui.dom.playModeSel.value === 'random') {
+      ps.playList = Utils.shuffleArray(data);
+    } else {
+      ps.playList = [...data];
+    }
+    ps.currentIndex = 0;
+  }
+
+  switchModule() {
+    this.stopAll();
+    this.state.mode = BuiltInData.MODE.NORMAL;
+    this.ui.updateModeTag();
+    this.initPlayList(this.ui.dom.moduleSel.value);
+    this.ui.dom.delCustomModuleBtn.disabled = this.ui.isBuiltInModule(this.ui.dom.moduleSel.value);
+    this.ui.updateProgress();
+    this.ui.resetUI();
+  }
+
+  switchPlayMode() {
+    this.stopAll();
+    this.initPlayList(this.ui.dom.moduleSel.value);
+    this.ui.updateProgress();
+  }
+
+  togglePlay() {
+    const ps = this.state.currentPlayState;
+    ps.isPlaying ? this.pausePlay() : this.startPlay();
+  }
+
+  startPlay() {
+    const ps = this.state.currentPlayState;
+    if (ps.playList.length === 0) return Utils.showToast('当前模块暂无内容');
+    
+    ps.isPlaying = true;
+    this.ui.updatePlayButton(true);
+    this.playCurrentWord();
+  }
+
+  pausePlay() {
+    const ps = this.state.currentPlayState;
+    ps.isPlaying = false;
+    this.ui.updatePlayButton(false);
+    this.clearAllTimers();
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+
+  stopAll() {
+    this.pausePlay();
+  }
+
+  clearAllTimers() {
+    if (this.state.timer) clearTimeout(this.state.timer);
+    if (this.state.countdownTimer) clearInterval(this.state.countdownTimer);
+    this.state.timer = null;
+    this.state.countdownTimer = null;
+    this.ui.updateCountdown('');
+  }
+
+  playCurrentWord() {
+    const ps = this.state.currentPlayState;
+    if (!ps.isPlaying) return;
+    if (ps.currentIndex >= ps.playList.length) {
+      if (this.ui.dom.loopSwitch.checked) {
+        ps.currentIndex = 0;
+        this.playCurrentWord();
+    
+      } else {
+        this.pausePlay();
+        
+        Utils.showToast('播放完成');
+      }
+      return;
+    }
+
+    const item = ps.playList[ps.currentIndex];
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+    const dictMode = this.ui.dom.dictModeSel.value;
+ 
+      this.ui.updateWordText(isEn ? (dictMode === 'cn' ? item.cn : item.en) : '请默写');
+      this.ui.updateProgress();
+
+    const speakText = isEn ? (dictMode === 'cn' ? item.cn : item.en) : item.cn;
+    const repeatTimes = parseInt(this.ui.dom.repeatTimesSel.value) || 1;
+
+    this.speakText(speakText, repeatTimes, () => {
+      this.startCountdown();
+    });
+  }
+
+  speakText(text, repeatTimes = 1, onComplete) {
+    if (!text) return onComplete?.();
+
+    const speak = (times) => {
+      if (times <= 0) return onComplete?.();
+
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = parseFloat(this.ui.dom.speedSel.value) || 1;
+        utterance.lang = this.state.curType === BuiltInData.TYPE.EN 
+          ? this.ui.dom.langSel.value 
+          : 'zh-CN';
+
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          const voice = voices.find(v => v.name === this.ui.dom.voiceSel.value);
+          if (voice) utterance.voice = voice;
+        }
+
+        utterance.onend = () => {
+          setTimeout(() => speak(times - 1), 500);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.error('语音播报失败:', e);
+        document.getElementById('voiceTip').style.display = 'block';
+        setTimeout(() => speak(times - 1), 1000);
+      }
+    };
+
+    speak(repeatTimes);
+  }
+
+  startCountdown() {
+    this.clearAllTimers();
+    const baseDelay = parseInt(this.ui.dom.baseDelaySel.value) || 5;
+    const extraSec = parseInt(this.ui.dom.extraSecSel.value) || 0;
+    let countdown = baseDelay + extraSec;
+
+    this.ui.updateCountdown(countdown);
+    this.state.countdownTimer = setInterval(() => {
+      countdown--;
+      this.ui.updateCountdown(countdown);
+      if (countdown <= 0) {
+        this.clearAllTimers();
+        this.nextWord(true);
+      }
+    }, 1000);
+  }
+
+  prevWord(auto = false) {
+    this.stopAll();
+    const ps = this.state.currentPlayState;
+    ps.currentIndex = ps.currentIndex > 0 ? ps.currentIndex - 1 : ps.playList.length - 1;
+    this.updateCurrentWordDisplay();
+    if (ps.isPlaying && !auto) this.startPlay();
+  }
+
+    nextWord(auto = false) {
+    const ps = this.state.currentPlayState;
+    if (auto) {
+      // 自动播放下一个：不停止，直接切换索引并继续播放
+      
+    if(this.ui.dom.loopSwitch.checked) ps.currentIndex = ps.currentIndex < ps.playList.length - 1 ? ps.currentIndex + 1 : 0;
+    else ps.currentIndex = ps.currentIndex < ps.playList.length - 1 ? ps.currentIndex + 1 : -1;
+      this.updateCurrentWordDisplay();
+      this.playCurrentWord();
+    } else {
+      // 手动点击下一个：停止当前播放，切换索引
+      this.stopAll();
+      ps.currentIndex = ps.currentIndex < ps.playList.length - 1 ? ps.currentIndex + 1 : 0;
+      this.updateCurrentWordDisplay();
+      if (ps.isPlaying && !auto) this.startPlay();
+    }
+  }
+
+  updateCurrentWordDisplay() {
+    const ps = this.state.currentPlayState;
+    const item = ps.playList[ps.currentIndex];
+    if (!item) return;
+
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+    const dictMode = this.ui.dom.dictModeSel.value;
+    this.ui.updateWordText(isEn ? (dictMode === 'cn' ? item.cn : item.en) : item.cn);
+    this.ui.updateProgress();
+  }
+
+  markWrongWord() {
+    const ps = this.state.currentPlayState;
+    if (ps.currentIndex >= ps.playList.length) return Utils.showToast('暂无可标记的内容');
+
+    const item = ps.playList[ps.currentIndex];
+    const list = this.state.currentWrongList;
+
+    const exists = list.some(i => 
+      this.state.curType === BuiltInData.TYPE.EN 
+        ? i.cn === item.cn && i.en === item.en 
+        : i.cn === item.cn
+    );
+
+    if (exists) return Utils.showToast('该内容已在易错词列表中');
+
+    list.push({ ...item });
+    this.state.saveWrongList();
+    this.ui.updateWrongList();
+    Utils.showToast('标记成功');
+  }
+
+  deleteWrongWord(index) {
+    if (!confirm('确定删除该易错词？')) return;
+    this.state.currentWrongList.splice(index, 1);
+    this.state.saveWrongList();
+    this.ui.updateWrongList();
+    Utils.showToast('删除成功');
+  }
+
+  clearWrongWords() {
+    if (!confirm('确定清空所有易错词？')) return;
+    this.state.wrongList[this.state.curType] = [];
+    this.state.saveWrongList();
+    this.ui.updateWrongList();
+    Utils.showToast('易错词已清空');
+  }
+
+  addWrongWordManually() {
+    const cn = prompt('请输入中文内容：');
+    if (!cn) return;
+
+    let item = { cn: cn.trim() };
+    if (this.state.curType === BuiltInData.TYPE.EN) {
+      const en = prompt('请输入对应的英文内容：');
+      if (!en) return;
+      item.en = en.trim();
+    }
+
+    this.state.currentWrongList.push(item);
+    this.state.saveWrongList();
+    this.ui.updateWrongList();
+    Utils.showToast('添加成功');
+  }
+
+  exportWrongWords() {
+    const list = this.state.currentWrongList;
+    if (list.length === 0) return Utils.showToast('暂无易错词可导出');
+
+    let content = '';
+    list.forEach(item => {
+      content += this.state.curType === BuiltInData.TYPE.EN 
+        ? `${item.cn}=${item.en}\n` 
+        : `${item.cn}\n`;
+    });
+
+    Utils.downloadFile(`${this.state.curType === BuiltInData.TYPE.EN ? '英语' : '语文'}_易错词.txt`, content);
+    Utils.showToast('导出成功');
+  }
+
+  toggleWrongMode() {
+    this.stopAll();
+    this.state.mode = this.state.mode === BuiltInData.MODE.NORMAL 
+      ? BuiltInData.MODE.WRONG 
+      : BuiltInData.MODE.NORMAL;
+    
+    this.ui.updateModeTag();
+    
+    const ps = this.state.currentPlayState;
+    if (this.state.mode === BuiltInData.MODE.WRONG) {
+      ps.playList = [...this.state.currentWrongList];
+    } else {
+      this.initPlayList(this.ui.dom.moduleSel.value);
+    }
+    
+    ps.currentIndex = 0;
+    this.ui.updateProgress();
+    this.ui.resetUI();
+  }
+
+  toggleAnswer() {
+    const ps = this.state.currentPlayState;
+    if (ps.playList.length === 0 || ps.currentIndex >= ps.playList.length) {
+      return Utils.showToast('暂无答案可显示');
+    }
+
+    if (this.ui.dom.answerBox.style.display === 'block') {
+      this.ui.hideAnswer();
+    } else {
+      this.ui.showAnswer(ps.playList[ps.currentIndex]);
+    }
+  }
+
+  speakAnswer() {
+    const ps = this.state.currentPlayState;
+    if (ps.playList.length === 0 || ps.currentIndex >= ps.playList.length) {
+      return Utils.showToast('暂无内容可播报');
+    }
+
+    const item = ps.playList[ps.currentIndex];
+    const isEn = this.state.curType === BuiltInData.TYPE.EN;
+    const dictMode = this.ui.dom.dictModeSel.value;
+    const text = isEn ? (dictMode === 'cn' ? item.en : item.cn) : item.cn;
+    
+    this.speakText(text, 1);
+  }
+
+  reset() {
+    const isWrong = this.state.mode === BuiltInData.MODE.WRONG;
+    const moduleName = this.ui.dom.moduleSel.options[this.ui.dom.moduleSel.selectedIndex]?.text || '当前模块';
+    const msg = isWrong ? '确定重置易错词听写？' : `确定重置「${moduleName}」？`;
+    
+    if (!confirm(msg)) return;
+
+    this.stopAll();
+    const ps = this.state.currentPlayState;
+    ps.isPlaying = false;
+    ps.currentIndex = 0;
+
+    if (isWrong) {
+      ps.playList = [...this.state.currentWrongList];
+    } else {
+      this.initPlayList(this.ui.dom.moduleSel.value);
+    }
+
+    this.ui.updatePlayButton(false);
+    this.ui.updateProgress();
+    this.ui.resetUI();
+    Utils.showToast('重置成功');
+  }
+
+  saveCustomModule() {
+    const name = this.ui.dom.customModuleNameInput.value.trim();
+    const content = this.ui.dom.customTextarea.value.trim();
+
+    if (!name || !content) return Utils.showToast('模块名和内容不能为空');
+
+    const items = [];
+    content.split('\n').forEach(line => {
+      const trimLine = line.trim();
+      if (!trimLine) return;
+
+      if (this.state.curType === BuiltInData.TYPE.EN) {
+        const [cn, en] = trimLine.split('=');
+        if (cn && en) items.push({ cn: cn.trim(), en: en.trim() });
+      } else {
+        items.push({ cn: trimLine });
+      }
+    });
+
+    if (items.length === 0) return Utils.showToast('解析失败，请检查格式');
+
+    this.state.custom[this.state.curType][name] = items;
+    this.state.saveCustom();
+    this.ui.closeCustomModal();
+    this.ui.updateModuleList();
+    Utils.showToast(`自定义模块「${name}」保存成功`);
+  }
+
+  deleteCustomModule() {
+    const key = this.ui.dom.moduleSel.value;
+    if (this.ui.isBuiltInModule(key)) return Utils.showToast('内置模块不能删除');
+    if (!confirm(`确定删除自定义模块「${key}」吗？`)) return;
+
+    delete this.state.custom[this.state.curType][key];
+    this.state.saveCustom();
+    this.ui.updateModuleList();
+    this.initPlayList(this.ui.dom.moduleSel.value);
+    this.ui.updateProgress();
+    this.ui.resetUI();
+    Utils.showToast('模块删除成功');
+  }
+
+  importTxtFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      this.ui.dom.customTextarea.value = ev.target.result;
+      e.target.value = '';
+      Utils.showToast('TXT文件导入成功');
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  exportModuleToTxt() {
+    const key = this.ui.dom.moduleSel.value;
+    const data = this.state.currentModules[key];
+    if (!data || data.length === 0) return Utils.showToast('当前模块无内容可导出');
+
+    let content = '';
+    data.forEach(item => {
+      content += this.state.curType === BuiltInData.TYPE.EN 
+        ? `${item.cn}=${item.en}\n` 
+        : `${item.cn}\n`;
+    });
+
+    Utils.downloadFile(`${this.state.curType === BuiltInData.TYPE.EN ? '英语' : '语文'}_${key}.txt`, content);
+    Utils.showToast('TXT文件导出成功');
+  }
+
+  handleOCR(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    Utils.showToast('正在识别图片内容，请稍候...');
+    
+    Tesseract.recognize(
+      file,
+      this.state.curType === BuiltInData.TYPE.EN ? 'eng+chi_sim' : 'chi_sim',
+      { logger: m => console.log(m) }
+    ).then(({ data: { text } }) => {
+      this.ui.dom.customTextarea.value = text.replace(/\s+/g, '\n').trim();
+      e.target.value = '';
+      Utils.showToast('识别完成');
+    }).catch(err => {
+      console.error('OCR识别失败:', err);
+      Utils.showToast('识别失败，请重试');
+    });
+  }
+
+  loadSystemVoices() {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        this.ui.updateVoiceList(voices);
+      }
+    };
+
+    loadVoices();
+    if (typeof window.speechSynthesis !== 'undefined') {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }
+
+  startRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Utils.showToast('您的浏览器不支持录音功能');
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        this.state.mediaRecorder = new MediaRecorder(stream);
+        this.state.chunks = [];
+        
+        this.state.mediaRecorder.ondataavailable = (e) => {
+          this.state.chunks.push(e.data);
+        };
+
+        this.state.mediaRecorder.onstop = () => {
+          const blob = new Blob(this.state.chunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          this.ui.dom.recordAudio.src = url;
+          this.ui.dom.recordAudio.style.display = 'block';
+          
+          const name = prompt('请输入录音名称：', `录音${this.state.recList.length + 1}`);
+          if (name) {
+            this.state.recList.push({ name: name, url: url });
+            this.state.saveRecList();
+          }
+        };
+
+        this.state.mediaRecorder.start();
+        this.ui.dom.recordBtn.style.display = 'none';
+        this.ui.dom.stopRecordBtn.style.display = 'inline-block';
+        Utils.showToast('录音中...');
+      })
+      .catch(err => {
+        console.error('录音权限获取失败:', err);
+        Utils.showToast('请允许麦克风权限');
+      });
+  }
+
+  stopRecording() {
+    if (this.state.mediaRecorder && this.state.mediaRecorder.state !== 'inactive') {
+      this.state.mediaRecorder.stop();
+      this.state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    this.ui.dom.recordBtn.style.display = 'inline-block';
+    this.ui.dom.stopRecordBtn.style.display = 'none';
+    Utils.showToast('录音已停止');
+  }
+
+  deleteRecording(index) {
+    if (!confirm('确定删除该录音？')) return;
+    this.state.recList.splice(index, 1);
+    this.state.saveRecList();
+    this.ui.updateRecordingList();
+    Utils.showToast('删除成功');
+  }
+}
+
+// 启动应用
+document.addEventListener('DOMContentLoaded', () => {
+  window.dictApp = new DictApp();
+});
+</script>
+</body>
+</html>
